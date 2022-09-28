@@ -23,6 +23,19 @@ class Token:
         self._retries = 5
         self._timeout = 10
         self.url = 'https://twitter.com'
+        
+        if all(
+                (
+                        hasattr(config, "Proxy_host"),
+                        hasattr(config, "Proxy_port"),
+                        hasattr(config, "Proxy_type"),
+                        config.Proxy_type == "http",
+                )
+        ):
+            self._session.proxies = {
+                "http": f"http://{config.Proxy_host}:{config.Proxy_port}",
+                "https": f"http://{config.Proxy_host}:{config.Proxy_port}",
+            }
 
     def _request(self):
         for attempt in range(self._retries + 1):
