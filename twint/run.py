@@ -242,8 +242,7 @@ class Twint:
 
         if self.config.User_id is not None and self.config.Username is None:
             logme.debug(__name__ + ':Twint:main:user_id')
-            self.config.Username = await get.Username(self.config.User_id, self.config.Bearer_token,
-                                                      self.config.Guest_token)
+            self.config.Username = await get.Username(self.config)
 
         if self.config.Username is not None and self.config.User_id is None:
             logme.debug(__name__ + ':Twint:main:username')
@@ -302,8 +301,7 @@ class Twint:
         try:
             if self.config.User_id is not None and self.config.Username is None:
                 logme.debug(__name__ + ':Twint:Lookup:user_id')
-                self.config.Username = await get.Username(self.config.User_id, self.config.Bearer_token,
-                                                          self.config.Guest_token)
+                self.config.Username = await get.Username(self.config)
             await get.User(self.config.Username, self.config, db.Conn(self.config.Database))
 
         except Exception as e:
