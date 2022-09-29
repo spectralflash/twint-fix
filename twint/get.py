@@ -80,7 +80,6 @@ def get_connector(config):
             elif config.Proxy_type.lower() == "socks4":
                 _type = ProxyType.SOCKS4
             elif config.Proxy_type.lower() == "http":
-                global httpproxy
                 httpproxy = "http://" + config.Proxy_host + ":" + str(config.Proxy_port)
                 return _connector
             else:
@@ -132,6 +131,9 @@ async def RequestUrl(config, init):
             _url = await url.Favorites(config.Username, init)
         _serialQuery = _url
 
+    if getattr(config, "Proxy_type", None) == "http":
+        params.append(("httpproxy", f"http://{config.Proxy_host}:{config.Proxy_port}"))
+
     response = await Request(_url, params=params, connector=_connector, headers=_headers)
 
     if config.Debug:
@@ -164,6 +166,7 @@ async def Request(_url, connector=None, params=None, headers=None):
 async def Response(session, _url, params=None):
     logme.debug(__name__ + ':Response')
     with timeout(120):
+        httpproxy = dict(params or []).get("httpproxy", None)
         async with session.get(_url, ssl=True, params=params, proxy=httpproxy) as response:
             resp = await response.text()
             if response.status == 429:  # 429 implies Too many requests i.e. Rate Limit Exceeded
@@ -181,15 +184,18 @@ async def RandomUserAgent(wa=None):
         return random.choice(user_agent_list)
 
 
-async def Username(_id, bearer_token, guest_token):
+async def Username(config):
     logme.debug(__name__ + ':Username')
-    _dct = {'userId': _id, 'withHighlightedLabel': False}
+    _dct = {'userId': config.User_id, 'withHighlightedLabel': False}
     _url = "https://api.twitter.com/graphql/B9FuNQVmyx32rdbIPEZKag/UserByRestId?variables={}".format(dict_to_url(_dct))
     _headers = {
-        'authorization': bearer_token,
-        'x-guest-token': guest_token,
+        'authorization': config.Bearer_token,
+        'x-guest-token': config.Guest_token,
     }
-    r = await Request(_url, headers=_headers)
+    params = []
+    if getattr(config, "Proxy_type", None) == "http":
+        params.append(("httpproxy", f"http://{config.Proxy_host}:{config.Proxy_port}"))
+    r = await Request(_url, headers=_headers, params=params)
     j_r = loads(r)
     username = j_r['data']['user']['legacy']['screen_name']
     return username
@@ -197,8 +203,11 @@ async def Username(_id, bearer_token, guest_token):
 
 async def Tweet(url, config, conn):
     logme.debug(__name__ + ':Tweet')
+    params = []
+    if getattr(config, "Proxy_type", None) == "http":
+        params.append(("httpproxy", f"http://{config.Proxy_host}:{config.Proxy_port}"))
     try:
-        response = await Request(url)
+        response = await Request(url, params=params)
         soup = BeautifulSoup(response, "html.parser")
         tweets = soup.find_all("div", "tweet")
         await Tweets(tweets, config, conn, url)
@@ -215,8 +224,11 @@ async def User(username, config, conn, user_id=False):
         'authorization': config.Bearer_token,
         'x-guest-token': config.Guest_token,
     }
+    params = []
+    if getattr(config, "Proxy_type", None) == "http":
+        params.append(("httpproxy", f"http://{config.Proxy_host}:{config.Proxy_port}"))
     try:
-        response = await Request(_url, headers=_headers)
+        response = await Request(_url, headers=_headers, params=params)
         j_r = loads(response)
         if user_id:
             try:
